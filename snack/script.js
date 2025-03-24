@@ -18,3 +18,40 @@
 //Restituire una Promise che risolve un oggetto contenente i dati aggregati.
 //Stampare i dati in console in un messaggio ben formattato.
 //Testa la funzione con la query "london".
+const getDashboardData = async (query) => {
+  const Url = "https://boolean-spec-frontend.vercel.app/freetestapi";
+
+  const urls = {
+    destinations: `${Url}/destinations?search=${query}`,
+    weather: `${Url}/weathers?search=${query}`,
+    airport: `${Url}/airports?search=${query}`,
+  };
+
+  try {
+    const [destinations, weather, airport] = await Promise.all([
+      fetch(urls.destinations).then((res) => res.json()),
+      fetch(urls.weather).then((res) => res.json()),
+      fetch(urls.airport).then((res) => res.json()),
+    ]);
+
+    const dashboardData = {
+      city: destinations[0]?.name ?? "N/A",
+      country: destinations[0]?.country ?? "N/A",
+      temperature: weather[0]?.temperature ?? "N/A",
+      weather: weather[0]?.weather_description ?? "N/A",
+      airport: airport[0]?.name ?? "N/A",
+    };
+
+    console.log("Dashboard data for", query.toUpperCase());
+    console.table(dashboardData);
+
+    return dashboardData;
+  } catch (error) {
+    console.error(`Error fetching ${query}:`, error);
+    throw error;
+  }
+};
+
+(async () => {
+  const data = await getDashboardData("london");
+})();
