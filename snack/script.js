@@ -18,40 +18,48 @@
 //Restituire una Promise che risolve un oggetto contenente i dati aggregati.
 //Stampare i dati in console in un messaggio ben formattato.
 //Testa la funzione con la query "london".
-const getDashboardData = async (query) => {
-  const Url = "https://boolean-spec-frontend.vercel.app/freetestapi";
 
-  const urls = {
-    destinations: `${Url}/destinations?search=${query}`,
-    weather: `${Url}/weathers?search=${query}`,
-    airport: `${Url}/airports?search=${query}`,
-  };
-
+async function fetchjson(url) {
+  const response = await fetch(url);
+  const obj = await response.json();
+  return obj;
+}
+async function getDashboardData(query) {
   try {
-    const [destinations, weather, airport] = await Promise.all([
-      fetch(urls.destinations).then((res) => res.json()),
-      fetch(urls.weather).then((res) => res.json()),
-      fetch(urls.airport).then((res) => res.json()),
-    ]);
+    console.log(`Caricando i dati per ${query}`);
+    const destinationPromise = fetchjson(
+      `https://www.freetestapi.com/api/v1/destinations?search=${query}`
+    );
+    const weatherPromise = fetchjson(
+      `https://www.freetestapi.com/api/v1/weathers?search=${query}`
+    );
+    const airportPromise = fetchjson(
+      `https://www.freetestapi.com/api/v1/airports?search=${query}`
+    );
+    const promises = [destinationPromise, weatherPromise, airportPromise];
+    const [destinations, weather, airport] = await Promise.all(promises);
 
-    const dashboardData = {
-      city: destinations[0]?.name ?? "N/A",
-      country: destinations[0]?.country ?? "N/A",
-      temperature: weather[0]?.temperature ?? "N/A",
-      weather: weather[0]?.weather_description ?? "N/A",
-      airport: airport[0]?.name ?? "N/A",
+    console.log([destinations, weather, airport]);
+
+    return {
+      city: destinations[0].name,
+      country: destinations[0].country,
+      temperature: weather[0].temperature,
+      weather: weather[0].weather_description,
+      airport: airport[0].name,
     };
-
-    console.log("Dashboard data for", query.toUpperCase());
-    console.table(dashboardData);
-
-    return dashboardData;
   } catch (error) {
-    console.error(`Error fetching ${query}:`, error);
-    throw error;
+    throw new Error(`Errore: ${error.message}`);
   }
-};
+}
 
-(async () => {
-  const data = await getDashboardData("london");
-})();
+getDashboardData("london")
+  .then((data) => {
+    console.log("data:", data);
+    console.log(
+      ` ${data.city} is in  ${data.country}.\n` +
+        `Today there are ${data.temperature} degrees and the weather is ${data.weather}.\n` +
+        `The main airport is ${data.airport}.\n`
+    );
+  })
+  .catch((error) => console.log(error));

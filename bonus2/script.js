@@ -5,55 +5,77 @@
 //Stampa in console un messaggio di errore per ogni richiesta fallita.
 //Testa la funzione con un link fittizio per il meteo (es. https://www.meteofittizio.it).
 
-const Url = "https://boolean-spec-frontend.vercel.app/freetestapi";
-
-const getDashboardData = async (query) => {
-  const destinationsUrl = `${Url}/destinations?search=${query}`;
-  const weatherUrl = `https://www.meteofittizio.it`;
-  const airportUrl = `${Url}/airports?search=${query}`;
-
-  const results = await Promise.allSettled([
-    fetch(destinationsUrl).then((res) => res.json()),
-    fetch(weatherUrl).then((res) => res.json()),
-    fetch(airportUrl).then((res) => res.json()),
-  ]);
-
-  const dashboardData = {
-    city: null,
-    country: null,
-    temperature: null,
-    weather: null,
-    airport: null,
-  };
-
-  if (results[0].status === "fulfilled" && results[0].value[0]) {
-    dashboardData.city = results[0].value[0].name;
-    dashboardData.country = results[0].value[0].country;
-  } else {
-    console.error("Errore: impossibile recuperare i dati della destinazione");
-  }
-
-  if (results[1].status === "fulfilled" && results[1].value[0]) {
-    dashboardData.temperature = results[1].value[0].temperature;
-    dashboardData.weather = results[1].value[0].weather_description;
-  } else {
-    console.error("Errore: impossibile recuperare i dati meteo");
-  }
-
-  if (results[2].status === "fulfilled" && results[2].value[0]) {
-    dashboardData.airport = results[2].value[0].name;
-  } else {
-    console.error("Errore: impossibile recuperare i dati dell'aeroporto");
-  }
-
-  console.log("Dati del dashboard:", dashboardData);
-  return dashboardData;
-};
-
-(async () => {
+async function fetchJson(url) {
+  const response = await fetch(url);
+  const obj = await response.json();
+  return obj;
+}
+async function getDashboardData(query) {
   try {
-    const data = await getDashboardData("london");
+    console.log(`Caricando i dati per ${query}`);
+
+    const destinationPromise = fetchJson(
+      `https://www.freetestapi.com/api/v1/destinations?search=${query}`
+    );
+    const weatherPromise = fetchJson(
+      `https://www.freetestapi.com/api/v1/weathers?search=${query}`
+    );
+    const airportPromise = fetchJson(
+      `https://www.freetestapi.com/api/v1/airports?search=${query}`
+    );
+    const promises = [destinationPromise, weatherPromise, airportPromise];
+    const [destinationsResult, weathersResult, airportsResult] =
+      await Promise.allSettled(promises);
+
+    const data = {};
+
+    if (destinationsResult.status === "rejected") {
+      console.error(`Problema in destinations: `, destinationsResult.reason);
+      data.city = null;
+      data.country = null;
+    } else {
+      const destination = destinationsResult.value[0];
+      data.city = destination ? destination.name : null;
+      data.country = destination ? destination.country : null;
+    }
+
+    if (weathersResult.status === "rejected") {
+      console.error("Problema in weathers: ", weathersResult.reason);
+      data.temperature = null;
+      data.weather = null;
+    } else {
+      const weather = weathersResult.value[0];
+      data.temperature = weather ? weather.temperature : null;
+      data.weather = weather ? weather.weather_description : null;
+    }
+
+    if (airportsResult.status === "rejected") {
+      console.error("Problema in airports: ", airportsResult.reason);
+      data.airport = null;
+    } else {
+      const airport = airportsResult.value[0];
+      data.airport = airport ? airport.name : null;
+    }
+
+    return data;
   } catch (error) {
-    console.error("Errore generale:", error);
+    throw new Error(`Errore: ${error.message}`);
   }
-})();
+}
+getDashboardData("vienna")
+  .then((data) => {
+    console.log("Dasboard data:", data);
+    let frase = "";
+    if (data.city !== null && data.country !== null) {
+      frase += `${data.city} is in ${data.country}.\n`;
+    }
+    if (data.temperature !== null && data.weather !== null) {
+      frase += `Today there are ${data.temperature} degrees and the weather is ${data.weather}.\n`;
+    }
+    if (data.airport !== null) {
+      frase += `The main airport is ${data.airport}.\n`;
+    }
+    console.log(frase);
+  })
+
+  .catch((error) => console.error(error));
